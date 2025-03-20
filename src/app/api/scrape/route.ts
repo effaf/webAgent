@@ -59,8 +59,11 @@ async function scrapeCompanyListings(page: Page, url: string, pageNumber: number
     return Array.from(companyElements).map(element => {
       const anchorElement = element as HTMLAnchorElement
       const pillWrapper = element.querySelector('div[class*="_pillWrapper_i9oky_33"]')
-      const batchElement = pillWrapper?.querySelector('a:first-child span')
-      const industryElements = pillWrapper?.querySelectorAll('a:not(:first-child) span')
+      
+      const allPillLinks = pillWrapper?.querySelectorAll('a')
+      const batchElement = allPillLinks?.[0]?.querySelector('span')
+      const industryElements = Array.from(allPillLinks || []).slice(1).map(a => a.querySelector('span'))
+      
       const locationElement = element.querySelector('span[class*="_coLocation_i9oky_486"]')
       const descriptionElement = element.querySelector('span[class*="_coDescription_i9oky_495"]')
       const nameElement = element.querySelector('span[class*="_coName_i9oky_470"]')
@@ -69,7 +72,7 @@ async function scrapeCompanyListings(page: Page, url: string, pageNumber: number
         url: anchorElement.href || '',
         name: nameElement?.textContent?.trim() || '',
         batch: batchElement?.textContent?.trim() || '',
-        industry: Array.from(industryElements || []).map(el => el.textContent?.trim()).filter(Boolean).join(', '),
+        industry: industryElements.map(el => el?.textContent?.trim()).filter(Boolean).join(', '),
         location: locationElement?.textContent?.trim() || '',
         description: descriptionElement?.textContent?.trim() || ''
       }

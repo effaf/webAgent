@@ -10,7 +10,6 @@ export default function Home() {
   // Form state
   const [formState, setFormState] = useState<FormState>({
     url: "",
-    prompt: "",
     skills: "",
   });
 
@@ -44,8 +43,7 @@ export default function Home() {
       const userSkills = formState.skills.split(',').map(s => s.trim()).filter(Boolean);
       const analysis = await fetchYCombinatorData(
         formState.url,
-        userSkills,
-        formState.prompt
+        userSkills
       );
       setResults(analysis);
     } catch (error) {
@@ -63,7 +61,7 @@ export default function Home() {
 
       <main className="w-full max-w-2xl mx-auto text-center space-y-12 relative py-16 mt-[15vh]">
         <h1 className="text-5xl font-bold text-green-500 drop-shadow-lg pb-2">
-          Analyze Any Website
+          Find the best startup for you
         </h1>
 
         {errorState.error && <ErrorMessage message={errorState.error} />}

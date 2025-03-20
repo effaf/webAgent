@@ -2,7 +2,6 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import type { FormState } from "@/types/analyze";
 
@@ -49,22 +48,6 @@ export function WebsiteAnalysisForm({
                     group-hover:bg-zinc-800/70 group-hover:border-green-500/30"
           value={formState.skills}
           onChange={e => onFormChange("skills", e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-
-      <div className="relative w-full group">
-        <Textarea
-          placeholder="What would you like to know about this website? (Optional)"
-          className="w-full min-h-[100px] px-6 py-4 rounded-2xl bg-zinc-800/50 border-zinc-700/50 text-zinc-100 placeholder:text-zinc-500 
-                    focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50
-                    shadow-lg shadow-black/20 backdrop-blur-sm
-                    transition-all duration-300
-                    group-hover:bg-zinc-800/70 group-hover:border-green-500/30
-                    resize-none
-"
-          value={formState.prompt}
-          onChange={e => onFormChange("prompt", e.target.value)}
           disabled={isLoading}
         />
       </div>

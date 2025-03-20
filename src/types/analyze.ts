@@ -20,7 +20,6 @@ export interface AnalysisResult {
 
 export interface FormState {
   url: string;
-  prompt: string;
   skills: string;
 }
 
@@ -34,12 +33,12 @@ export interface ErrorState {
 }
 
 export interface CompanyAnalysis {
+  url: string;
   name: string;
-  description: string;
-  technologies: string[];
-  industry: string;
-  location: string;
-  teamSize: string;
+  batch?: string;
+  industry?: string;
+  location?: string;
+  description?: string;
   similarityScore: number;
   geminiAnalysis?: {
     overallAnalysis: string;
