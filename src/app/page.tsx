@@ -40,7 +40,19 @@ export default function Home() {
     setResults(null);
 
     try {
-      const userSkills = formState.skills.split(',').map(s => s.trim()).filter(Boolean);
+      if (!formState.skills.trim()) {
+        throw new Error("Please enter at least one skill");
+      }
+
+      const userSkills = formState.skills
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (userSkills.length === 0) {
+        throw new Error("Please enter valid skills separated by commas");
+      }
+
       const analysis = await fetchYCombinatorData(
         formState.url,
         userSkills

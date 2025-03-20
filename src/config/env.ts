@@ -5,8 +5,8 @@ const logger = new Logger("Config:Env");
 
 // Schema for environment variables
 const envSchema = z.object({
-  GOOGLE_API_KEY: z.string(),
   NODE_ENV: z.string(),
+  OPENAI_API_KEY: z.string(),
 });
 
 // Function to validate environment variables
@@ -14,8 +14,8 @@ const validateEnv = () => {
   try {
     logger.info("Validating environment variables");
     const env = {
-      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
       NODE_ENV: process.env.NODE_ENV,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     };
     const parsed = envSchema.parse(env);
     logger.info("Environment variables validated successfully");

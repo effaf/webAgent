@@ -1,3 +1,5 @@
+import { generateEmbedding, generateEmbeddings, calculateCosineSimilarity as calculateEmbeddingSimilarity } from './embeddings';
+
 interface CompanyLink {
   url: string
   name: string
@@ -69,46 +71,52 @@ export async function fetchAndExtractCompanyData(url: string): Promise<CompanyLi
   }
 }
 
-export function calculateCosineSimilarity(skills1: string[], skills2: string[]): number {
-  // Convert skills arrays to sets for unique values
-  const set1 = new Set(skills1.map(s => s.toLowerCase()))
-  const set2 = new Set(skills2.map(s => s.toLowerCase()))
-
-  // Create vectors
-  const allSkills = new Set([...set1, ...set2])
-  const vector1: number[] = Array.from(allSkills).map(skill => set1.has(skill) ? 1 : 0)
-  const vector2: number[] = Array.from(allSkills).map(skill => set2.has(skill) ? 1 : 0)
-
-  // Calculate dot product
-  const dotProduct = vector1.reduce((sum, val, i) => sum + (val * vector2[i]), 0)
-
-  // Calculate magnitudes
-  const magnitude1 = Math.sqrt(vector1.reduce((sum, val) => sum + (val * val), 0))
-  const magnitude2 = Math.sqrt(vector2.reduce((sum, val) => sum + (val * val), 0))
-
-  // Calculate cosine similarity
-  if (magnitude1 === 0 || magnitude2 === 0) return 0
-  return dotProduct / (magnitude1 * magnitude2)
-}
-
 export async function analyzeWithGemini(companies: CompanyLink[], userSkills: string[]): Promise<CompanyAnalysis[]> {
-  const companiesData = companies.map(company => {
-    // Create a skills array from company data for better matching
-    const companySkills = [
-      company.name,
-      company.industry || '',
-      company.description || ''
-    ].filter(Boolean)
-
-    return {
-      ...company,
-      similarityScore: calculateCosineSimilarity(userSkills, companySkills)
+  try {
+    if (!Array.isArray(userSkills) || userSkills.length === 0) {
+      throw new Error("User skills cannot be empty");
     }
-  }).sort((a, b) => b.similarityScore - a.similarityScore)
 
-  // TODO: Implement Gemini API call here
-  // This is where you'll make the actual API call to Gemini
-  // You'll need to format the data appropriately for the API
-
-  return companiesData
+    // Combine user skills into a single text for embedding
+    const userSkillsText = userSkills.join(", ");
+    
+    if (!companies || companies.length === 0) {
+      throw new Error("No companies provided for analysis");
+    }
+    
+    // Generate embedding for user skills
+    const userSkillsEmbedding = await generateEmbedding(userSkillsText);
+    
+    // Prepare company texts for batch embedding
+    const companyTexts = companies.map(company => {
+      const text = [
+        company.name,
+        company.industry || '',
+        company.description || ''
+      ].filter(Boolean).join(" ").trim();
+      
+      if (!text) {
+        throw new Error(`Invalid company data: ${company.name} has no content for embedding`);
+      }
+      return text;
+    });
+    
+    // Generate embeddings for all companies in one batch
+    const companyEmbeddings = await generateEmbeddings(companyTexts);
+    
+    // Calculate similarity scores and create CompanyAnalysis objects
+    const companiesData = companies.map((company, index) => {
+      return {
+        ...company,
+        similarityScore: calculateEmbeddingSimilarity(userSkillsEmbedding, companyEmbeddings[index])
+      };
+    });
+    
+    // Sort by similarity score in descending order
+    return companiesData.sort((a, b) => b.similarityScore - a.similarityScore);
+    
+  } catch (error) {
+    console.error('Error analyzing companies:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to analyze companies with embeddings');
+  }
 } 
