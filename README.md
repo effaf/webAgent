@@ -35,5 +35,5 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Contact
-Please reach out to me or open a pull request if you spot an improvement
+Please reach out to me or open a pull request if you spot an improvement <br/>
 Email - shlok.kothari@gmail.com
