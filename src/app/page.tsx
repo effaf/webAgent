@@ -41,7 +41,7 @@ export default function Home() {
 
     try {
       if (!formState.skills.trim()) {
-        throw new Error("Please enter at least one skill");
+        throw new Error('Please enter at least one skill');
       }
 
       const userSkills = formState.skills
@@ -50,7 +50,7 @@ export default function Home() {
         .filter(Boolean);
 
       if (userSkills.length === 0) {
-        throw new Error("Please enter valid skills separated by commas");
+        throw new Error('Please enter valid skills separated by commas');
       }
 
       const analysis = await fetchYCombinatorData(

@@ -1,4 +1,4 @@
-export function jsonToCSV(data: any): string {
+export function jsonToCSV(data: Record<string, unknown>[]): string {
   if (!data || !Array.isArray(data) || data.length === 0) {
     return "";
   }

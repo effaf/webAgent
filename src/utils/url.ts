@@ -23,12 +23,12 @@ export function normalizeUrl(urlString: string, baseUrl: string): string {
 }
 
 export function extractUrlsFromAnalysis(
-  analysis: any,
+  analysis: Record<string, unknown>,
   baseUrl: string
 ): string[] {
   const urls = new Set<string>();
 
-  const traverse = (obj: any) => {
+  const traverse = (obj: unknown): void => {
     if (!obj) return;
 
     if (typeof obj === "string") {
@@ -37,7 +37,7 @@ export function extractUrlsFromAnalysis(
         urls.add(normalizeUrl(obj, baseUrl));
       }
     } else if (typeof obj === "object") {
-      for (const value of Object.values(obj)) {
+      for (const value of Object.values(obj as Record<string, unknown>)) {
         if (Array.isArray(value)) {
           value.forEach(traverse);
         } else {

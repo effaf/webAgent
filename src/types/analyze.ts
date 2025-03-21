@@ -14,7 +14,11 @@ export interface PageMetadata {
 }
 
 export interface AnalysisResult {
-  analysis: any;
+  analysis: {
+    text?: string;
+    urls?: string[];
+    [key: string]: unknown;
+  };
   metadata: PageMetadata;
 }
 

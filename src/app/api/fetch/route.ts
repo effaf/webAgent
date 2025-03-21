@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
 
-const YC_COMPANIES_URL = 'https://www.ycombinator.com/companies'
-
 function isValidYCombinatorUrl(url: string): boolean {
   try {
     const urlObj = new URL(url)
@@ -42,6 +40,7 @@ export async function POST(request: Request) {
     const html = await response.text()
     return NextResponse.json({ html })
   } catch (error) {
+    console.error('Error fetching data:', error);
     return NextResponse.json(
       { error: 'Failed to fetch data' },
       { status: 500 }
