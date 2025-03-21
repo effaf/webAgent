@@ -5,6 +5,7 @@ import { WebsiteAnalysisForm } from "@/components/website-analysis-form";
 import type { FormState, LoadingState, ErrorState, CompanyAnalysis } from "@/types/analyze";
 import { fetchYCombinatorData } from "@/utils/ycombinator";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { CompanyList } from "@/components/ui/company-list";
 
 export default function Home() {
   // Form state
@@ -71,7 +72,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black flex flex-col items-center p-4 relative overflow-x-hidden">
       {/* <AmbientBackground /> */}
 
-      <main className="w-full max-w-2xl mx-auto text-center space-y-12 relative py-16 mt-[15vh]">
+      <main className="w-full max-w-6xl mx-auto text-center space-y-12 relative py-16 mt-[15vh]">
         <h1 className="text-5xl font-bold text-green-500 drop-shadow-lg pb-2">
           Find the best startup for you
         </h1>
@@ -87,10 +88,7 @@ export default function Home() {
 
         {results && (
           <div className="mt-8 text-left">
-            <h2 className="text-2xl font-bold text-green-500 mb-4">Analysis Results</h2>
-            <pre className="bg-zinc-800/50 p-4 rounded-lg overflow-auto">
-              {JSON.stringify(results, null, 2)}
-            </pre>
+            <CompanyList companies={results} />
           </div>
         )}
       </main>
