@@ -34,10 +34,12 @@ async function retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promis
   }
 }
 
-async function scrapeCompanyListings(page: Page, url: string, pageNumber: number = 1): Promise<CompanyData[]> {
-  const pageUrl = pageNumber > 1 ? `${url}${url.includes('?') ? '&' : '?'}page=${pageNumber}` : url
-  
-  await page.goto(pageUrl, { waitUntil: 'networkidle0' })
+async function scrapeCompanyListings(page: Page, url: string): Promise<CompanyData[]> {
+  // Navigate to the page with longer timeout
+  await page.goto(url, { 
+    waitUntil: 'networkidle0',
+    timeout: 30000 // 30 seconds timeout
+  })
 
   // Wait for the results container
   await page.waitForSelector('._section_i9oky_163._results_i9oky_343')
@@ -48,64 +50,41 @@ async function scrapeCompanyListings(page: Page, url: string, pageNumber: number
     if (!resultsContainer) return []
 
     const companyElements = resultsContainer.querySelectorAll('a[class*="_company_"]')
-    return Array.from(companyElements).map(element => {
-      const anchorElement = element as HTMLAnchorElement
-      const pillWrapper = element.querySelector('div[class*="_pillWrapper_i9oky_33"]')
-      
-      const allPillLinks = pillWrapper?.querySelectorAll('a')
-      const batchElement = allPillLinks?.[0]?.querySelector('span')
-      const industryElements = Array.from(allPillLinks || []).slice(1).map(a => a.querySelector('span'))
-      
-      const locationElement = element.querySelector('span[class*="_coLocation_i9oky_486"]')
-      const descriptionElement = element.querySelector('span[class*="_coDescription_i9oky_495"]')
-      const nameElement = element.querySelector('span[class*="_coName_i9oky_470"]')
+    const MAX_COMPANIES = 10  // Limit to first 10 companies
+    
+    return Array.from(companyElements)
+      .slice(0, MAX_COMPANIES)  // Only take first 10 companies
+      .map(element => {
+        const anchorElement = element as HTMLAnchorElement
+        const pillWrapper = element.querySelector('div[class*="_pillWrapper_i9oky_33"]')
+        
+        const allPillLinks = pillWrapper?.querySelectorAll('a')
+        const batchElement = allPillLinks?.[0]?.querySelector('span')
+        const industryElements = Array.from(allPillLinks || []).slice(1).map(a => a.querySelector('span'))
+        
+        const locationElement = element.querySelector('span[class*="_coLocation_i9oky_486"]')
+        const descriptionElement = element.querySelector('span[class*="_coDescription_i9oky_495"]')
+        const nameElement = element.querySelector('span[class*="_coName_i9oky_470"]')
 
-      return {
-        url: anchorElement.href || '',
-        name: nameElement?.textContent?.trim() || '',
-        batch: batchElement?.textContent?.trim() || '',
-        industry: industryElements.map(el => el?.textContent?.trim()).filter(Boolean).join(', '),
-        location: locationElement?.textContent?.trim() || '',
-        description: descriptionElement?.textContent?.trim() || ''
-      }
-    })
+        return {
+          url: anchorElement.href || '',
+          name: nameElement?.textContent?.trim() || '',
+          batch: batchElement?.textContent?.trim() || '',
+          industry: industryElements.map(el => el?.textContent?.trim()).filter(Boolean).join(', '),
+          location: locationElement?.textContent?.trim() || '',
+          description: descriptionElement?.textContent?.trim() || ''
+        }
+      })
   })
 
   if (companies.length === 0) {
-    throw new Error('No company links found')
+    // Log the page content for debugging
+    const pageContent = await page.content()
+    console.error('Page content:', pageContent)
+    throw new Error('No company links found. Please check if the page structure has changed.')
   }
 
   return companies
-}
-
-async function scrapeAllPages(page: Page, url: string): Promise<CompanyData[]> {
-  let allCompanies: CompanyData[] = []
-  let currentPage = 1
-  let hasMorePages = true
-
-  while (hasMorePages) {
-    try {
-      const companies = await retry(() => scrapeCompanyListings(page, url, currentPage))
-      allCompanies = [...allCompanies, ...companies]
-      
-      // Check if there's a next page button
-      const hasNextPage = await page.evaluate(() => {
-        const nextButton = document.querySelector('button[aria-label="Next page"]')
-        return nextButton && !nextButton.hasAttribute('disabled')
-      })
-
-      if (!hasNextPage) {
-        hasMorePages = false
-      } else {
-        currentPage++
-      }
-    } catch (error) {
-      console.error(`Error scraping page ${currentPage}:`, error)
-      hasMorePages = false
-    }
-  }
-
-  return allCompanies
 }
 
 async function getBrowserInstance(): Promise<Browser> {
@@ -117,10 +96,10 @@ async function getBrowserInstance(): Promise<Browser> {
     const executablePath = await chromium.executablePath()
     
     return puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--disable-gpu', '--disable-dev-shm-usage'],
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
-      headless: true,
+      headless: true
     })
   } else {
     // For local development, try to find Chrome in common locations
@@ -154,12 +133,13 @@ async function getBrowserInstance(): Promise<Browser> {
     return puppeteer.launch({
       executablePath,
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
     })
   }
 }
 
 export async function POST(request: Request) {
+  let browser: Browser | null = null;
   try {
     const { url } = await request.json()
 
@@ -174,20 +154,47 @@ export async function POST(request: Request) {
       )
     }
 
-    const browser = await getBrowserInstance()
+    browser = await getBrowserInstance()
     const page = await browser.newPage()
     
-    try {
-      const data = await retry(() => scrapeAllPages(page, url))
-      return NextResponse.json({ data })
-    } finally {
-      await browser.close()
-    }
+    // Set memory limits but allow necessary resources
+    await page.setRequestInterception(true)
+    page.on('request', (request) => {
+      // Only block images, allow other resources
+      if (request.resourceType() === 'image') {
+        request.abort()
+      } else {
+        request.continue()
+      }
+    })
+
+    // Set a longer timeout for the entire operation
+    page.setDefaultTimeout(30000)
+    page.setDefaultNavigationTimeout(30000)
+
+    const data = await retry(() => scrapeCompanyListings(page, url))
+    
+    // Close browser immediately after use
+    await browser.close()
+    browser = null
+    
+    return NextResponse.json({ 
+      data,
+      metadata: {
+        totalCompanies: data.length,
+        timestamp: new Date().toISOString()
+      }
+    })
   } catch (error) {
     console.error('Scraping error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to scrape data' },
       { status: 500 }
     )
+  } finally {
+    if (browser) {
+      await browser.close()
+      browser = null
+    }
   }
 } 
